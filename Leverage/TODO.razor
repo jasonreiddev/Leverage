@@ -1,0 +1,72 @@
+﻿<h3>TODO</h3>
+
+<h4>W.I.P</h4>
+<p>
+    Rearange page to show resources on side
+
+    Fabricate Carbon Fibre. 25Carbon + 25Power (lever - repair handel)
+    Fabticate Diamond. 2,500Carbon + 10,000Power (lever - diamond tipped *extra weight = move power, could take this up to heavyier stuff as an upgrande)
+
+    Jump start Synthisiser 1,000 power
+    Synthisise Sythetic Polymers. 30Power + ??? (autoclicker - pully upgrade)
+    Fabricate Nylon.  10SynthP + 100Power. (lever can be used as self lubrication)
+    Fabricate Chopped carbon fiber - 3D printer mattirial. 25Nylon + 25carbon fibre.
+
+    Reboot 3D printer. 2,500 power
+    3d print components. chopped carbon fibre + []
+    - lever handel
+    - autocrank
+    - ???
+
+    auto craft for items, up to certain capacity
+    more things that cost power /s
+
+</p>
+
+<h4>Functional</h4>
+<ul>
+    <li>Timer, for using power</li>
+    <li>Power stealing racoon, that you catch and then train to use the lever</li>
+</ul>
+
+<h4>Non-Functional</h4>
+<ul>
+    <li>copyright, Jason Reid</li>
+    <li>Dark without power</li>
+    <li>Theme</li>
+</ul>
+
+
+old code
+  public void XConvertResources(int powerRequired, int matterRequired, int antimatterRequired, int interstellarMediumRequired, string createdItem, int createdAmount)
+    {
+        if (power >= powerRequired & matter >= matterRequired & antimatter >= antimatterRequired & interstellarMedium >= interstellarMediumRequired)
+        {
+            PowerChange(-powerRequired);
+            matter = matter - matterRequired;
+            antimatter = antimatter - antimatterRequired;
+            interstellarMedium = interstellarMedium - interstellarMediumRequired;
+
+            switch (createdItem)
+            {
+                case "power":
+                    PowerChange(createdAmount);
+                    break;
+                case "matter":
+                    matter = matter + createdAmount;
+                    break;
+                case "antimatter":
+                    antimatter = antimatter + createdAmount;
+                    break;
+                case "interstellarMedium":
+                    interstellarMedium = interstellarMedium + createdAmount;
+                    break;
+                case "carbon":
+                    carbon = carbon + createdAmount;
+                    break;
+            }
+            StateHasChanged();
+        }
+
+    }
+

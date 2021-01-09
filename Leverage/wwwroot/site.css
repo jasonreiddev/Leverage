@@ -1,0 +1,47 @@
+﻿.flex-container {
+    display: flex;
+    flex-wrap: wrap;
+    margin: -0.5rem;
+/*    transition: all;*/
+}
+
+    .flex-container > * {
+        margin: 0.5rem;
+    }
+
+    .flex-container > section {
+        flex-basis: 0;
+        flex-grow: 999;
+        min-width: calc(50% - 1rem);
+    }
+
+    .flex-container > aside {
+        flex-basis: 20rem;
+        flex-grow: 1;
+    }
+
+path:not(#path) {
+    fill: none;
+    stroke: none;
+    stroke-width: 1.5px;
+}
+
+line {
+    fill: none;
+    stroke: black;
+    stroke-width: 5px;
+}
+
+circle:not(#base) {
+    fill: red;
+}
+
+rect {
+    fill: none;
+    cursor: crosshair;
+    pointer-events: all;
+}
+
+.hidden{
+    display: none;
+}

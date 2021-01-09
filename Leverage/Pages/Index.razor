@@ -1,0 +1,773 @@
+﻿@inject IJSRuntime JS;
+@*@inject Services.BlazorTimer Timer*@
+@page "/"
+
+<main class="flex-container" style="background-color: @backgroundColor">
+
+    @* Resources and Navigation *@
+
+
+    @* Text Box *@
+    <aside>
+        @for (int i = ListofMessages.Count() - 1; i >= 0; i--)
+        {
+            <p>@ListofMessages[i]</p>
+            if (i != 0)
+            {
+                <hr />
+            }
+        }
+    </aside>
+
+
+    @* Lever *@
+    <section>
+        <nav id="Nav" class="">
+            <button class="btn" @onclick="NavGenerator">Generator</button>
+            <button class="btn" @onclick="NavLab">Lab</button>
+        </nav>
+        <br />
+        <div id="Generator" class="@generator room">
+
+
+
+
+
+            <svg id="leverSVG" width="300" height="150" style="background: lightgrey;" class="container" onload="">
+                <path id="path" d=" M 50 115 A 100 90 0 0 1 250 115" fill="transparent" stroke="black" stroke-dasharray="5,5" />
+                <circle id="base" cx="150" cy="125" r="40" stroke="black" stroke-width="4" fill="grey" />
+                <rect x="75" y="120" rx="20" ry="20" width="150" height="50" style="fill:grey;stroke:black;stroke-width:5;" />
+            </svg>
+            <br /><br />
+
+            @* Dev *@
+            @if (true)
+            {
+                <button class="btn btn-primary" @onclick="PlayPauseStopWatch">
+                    @if (IsStopWatchTiming)
+                    {<span>Pause</span> }
+                    else
+                    { <span>Play</span>}
+                </button>
+
+
+                <button id="dumpPower" class="btn btn-danger" @onclick="DumpPower">Dump!</button>
+
+                <button id="doubleOrNothing" class="btn btn-danger" @onclick="DoubleOrNothing">Double or Nothing!</button>
+
+                <button id="lightningBolt" class="btn btn-danger" @onclick="LightningBolt">LightningBolt!</button>
+                <hr />
+            }
+
+            @foreach (ResourceManagement.Upgrade upgrade in resourceManagement.ListofUpgrades.Where(r => r.ListofModifiedResources[0].Name == "Power"))
+            {
+                bool locked = false;
+                foreach (ResourceManagement.RequiredResource requiredResource in upgrade.ListofRequiredResources)
+                {
+                    if (!getResource(requiredResource.Name).Obtained)
+                    {
+                        locked = true;
+                    }
+                }
+                if (!locked)
+                {
+                    <h4>@upgrade.Name</h4>
+                    <label for="@upgrade.Label">@upgrade.Label</label>
+                    <button id="@upgrade.Label" class="btn btn-primary" @onclick='() => Upgrade(upgrade)'>
+                        @foreach (ResourceManagement.RequiredResource RequiredResource in upgrade.ListofRequiredResources)
+                        {
+                            <span>@RequiredResource.Name: @RequiredResource.Amount </span>
+                        }
+                    </button>
+                    <hr />
+                }
+            }
+
+            <h4>@autoClickerTitle</h4>
+            <label for="autoClickerIncrease">@autoClickerLabel</label>
+            <button id="autoClickerIncrease" class="btn btn-primary" @onclick="AutoClickerIncrease">@autoClickerIncreaseCost Power</button>
+            <hr />
+
+            @foreach (ResourceManagement.Upgrade upgrade in resourceManagement.ListofUpgrades.Where(r => r.ListofModifiedResources[0].Name == "Pully"))
+            {
+                bool locked = false;
+                foreach (ResourceManagement.RequiredResource requiredResource in upgrade.ListofRequiredResources)
+                {
+                    if (!getResource(requiredResource.Name).Obtained)
+                    {
+                        locked = true;
+                    }
+                }
+                if (!locked)
+                {
+                    <h4>@upgrade.Name</h4>
+                    <label for="@upgrade.Label">@upgrade.Label</label>
+                    <button id="@upgrade.Label" class="btn btn-primary" @onclick='() => Upgrade(upgrade)'>
+                        @foreach (ResourceManagement.RequiredResource RequiredResource in upgrade.ListofRequiredResources)
+                        {
+                            <span>@RequiredResource.Name: @RequiredResource.Amount </span>
+                        }
+                    </button>
+                    <hr />
+                }
+            }
+
+
+        </div>
+
+        <div id="Lab" class="@lab room">
+            @if (getResource("Matter").CraftAmount > 0)
+            {
+                <h4>Pair Production</h4>
+                <label for="pairProduction">Converts a photon into a pair of particles: one matter, one antimatter.</label>
+                <button id="pairProduction" class="btn btn-primary" @onclick="PairProduction">@pairProductionCost Power</button>
+                <hr />
+
+                <label for="pairProductionIncrease">Increase photons fired per production cycle.</label>
+                <button id="pairProductionIncrease" class="btn btn-primary" @onclick="PairProductionIncrease">@pairProductionIncreaseCost Power</button>
+                <hr />
+
+                if (antimatterHarvestingChance < 1)
+                {
+                    <label for="antimatterHarvestingIncrease">Increase the probability of harvesting antimatter from pair production.</label>
+                    <button id="antimatterHarvestingIncrease" class="btn btn-primary" @onclick="AntimatterHarvestingIncrease">@antimatterHarvestingIncreaseCost Matter</button>
+                    <hr />
+
+                }
+            }
+            else
+            {
+                <h4>Reebot Particle Accelerator Terminal</h4>
+                <label for="pairProductionIncrease">Unlocks Pair Production.</label>
+                <button id="pairProductionIncrease" class="btn btn-primary" @onclick="PairProductionIncrease">@pairProductionIncreaseCost Power</button>
+                <hr />
+            }
+
+            @foreach (ResourceManagement.Resource resource in resourceManagement.ListofResources.Where(r => r.CraftAmount > 0 && !r.Hidden))
+            {
+                bool locked = false;
+                foreach (ResourceManagement.RequiredResource requiredResource in resource.ListofRequiredResources)
+                {
+                    if (!getResource(requiredResource.Name).Obtained)
+                    {
+                        locked = true;
+                    }
+                }
+                if (!locked)
+                {
+                    <h4>@resource.Name</h4>
+                    <label for="@resource.Label">@resource.Label</label>
+                    <button id="@resource.Label" class="btn btn-primary" @onclick='() => ConvertResources(resource)'>
+                        @foreach (ResourceManagement.RequiredResource RequiredResource in resource.ListofRequiredResources)
+                        {
+                            <span>@RequiredResource.Name: @RequiredResource.Amount </span>
+                        }
+                    </button>
+                    <hr />
+                }
+            }
+        </div>
+    </section>
+    <aside>
+        @foreach (ResourceManagement.Resource resource in resourceManagement.ListofResources.Where(r => r.Obtained))
+        {
+            <span>@resource.Name: @resource.Amount</span><br />
+        }
+    </aside>
+
+
+    <div>
+        @stopWatchTime.TotalSeconds
+        Day @Math.Floor(stopWatchTime.TotalDays / 60 + 1) @*@displayTime*@
+    </div>
+</main>
+
+@code{
+    //button values
+
+
+    //classes
+    public class ResourceManagement
+    {
+
+        public List<Resource> ListofResources { get; set; }
+        public class Resource
+        {
+            public string Name { get; set; }
+            public string Label { get; set; }
+            public int Amount { get; set; }
+            public bool Hidden { get; set; }
+            public bool Obtained { get; set; }
+            public int CraftAmount { get; set; }
+            public List<RequiredResource> ListofRequiredResources { get; set; }
+        }
+
+        public List<Upgrade> ListofUpgrades { get; set; }
+        public class Upgrade
+        {
+            public string Name { get; set; }
+            public string Label { get; set; }
+            public bool Hidden { get; set; }
+            public bool Obtained { get; set; }
+            public int ModifierAdd { get; set; }
+            public int ModifierMultiply { get; set; }
+            public int ModifierAddIncrease { get; set; }
+            public int ModifierMultiplyIncrease { get; set; }
+            public int CostAdd { get; set; }
+            public int CostMultiply { get; set; }
+            public List<Resource> ListofModifiedResources { get; set; }
+            public List<RequiredResource> ListofRequiredResources { get; set; }
+        }
+
+        public class RequiredResource
+        {
+            public string Name { get; set; }
+            public int Amount { get; set; }
+        }
+    }
+
+    //Room 'Navigation'
+    private string generator = "";
+    private string lab = "hidden";
+    public void NavLab()
+    {
+        generator = "hidden";
+        lab = "";
+    }
+    public void NavGenerator()
+    {
+        generator = "";
+        lab = "hidden";
+    }
+
+
+    //variables
+    private TimeSpan stopWatchTime = new TimeSpan(0, 0, 0);
+    private TimeSpan lastAction = new TimeSpan(0, 0, 0);
+    bool IsStopWatchTiming = false;
+
+    private string backgroundColor = "Black";
+    private Random rnd = new Random();
+
+    //resource Management
+    bool hasRequiredResources;
+    public ResourceManagement resourceManagement = new ResourceManagement()
+    {
+        ListofResources = new List<ResourceManagement.Resource>() {
+            new ResourceManagement.Resource() {
+                Name = "Power",
+                Label = "Create Power",
+                Amount = 0,
+                Hidden = true,
+                Obtained = true,
+                CraftAmount = 3,
+                ListofRequiredResources = new List<ResourceManagement.RequiredResource>{ }
+            },
+
+            new ResourceManagement.Resource() {
+                Name = "Matter",
+                Label = "Create Matter",
+                Amount = 0,
+                Hidden = true,//triggered by PairProduction
+                Obtained = false,
+                CraftAmount = 0,
+                ListofRequiredResources = new List<ResourceManagement.RequiredResource>{ }
+            },
+
+            new ResourceManagement.Resource() {
+                Name = "Antimatter",
+                Label = "Create Antimatter",
+                Amount = 0,//chance to fail in PairProduction
+                Hidden = true,//triggered by PairProduction, chance to fail
+                Obtained = false,
+                CraftAmount = 0,
+                ListofRequiredResources = new List<ResourceManagement.RequiredResource>{ }
+            },
+
+            new ResourceManagement.Resource() {
+                Name = "Interstellar Medium",
+                Label = "Create Interstellar Medium(ISM)",
+                Amount = 0,
+                Obtained = false,
+                CraftAmount = 25,
+                ListofRequiredResources = new List<ResourceManagement.RequiredResource>
+{
+                    new ResourceManagement.RequiredResource { Name = "Power", Amount = 50 },
+                    new ResourceManagement.RequiredResource { Name = "Matter", Amount = 25 },
+                    new ResourceManagement.RequiredResource { Name = "Antimatter", Amount = 25 }
+                }
+            },
+
+            new ResourceManagement.Resource() {
+                Name = "Carbon",
+                Label = "Create Carbon",
+                Amount = 0,
+                Obtained = false,
+                CraftAmount = 25,
+                ListofRequiredResources = new List<ResourceManagement.RequiredResource>
+{
+                    new ResourceManagement.RequiredResource { Name = "Power", Amount = 100 },
+                    new ResourceManagement.RequiredResource { Name = "Interstellar Medium", Amount = 30 },
+                }
+            },
+
+            new ResourceManagement.Resource() {
+                Name = "Carbon Fibre",
+                Label= "Create Carbon Fibre",
+                Amount = 0,
+                Obtained = false,
+                CraftAmount = 10,
+                ListofRequiredResources = new List<ResourceManagement.RequiredResource>
+{
+                    new ResourceManagement.RequiredResource { Name = "Carbon", Amount = 30 },
+                    new ResourceManagement.RequiredResource { Name = "Power", Amount = 200}
+                }
+            },
+
+            new ResourceManagement.Resource() {
+                Name = "Nylon",
+                Label= "Create Nylon",
+                Amount = 0,
+                Obtained = false,
+                CraftAmount = 15,
+                ListofRequiredResources = new List<ResourceManagement.RequiredResource>
+{
+                    new ResourceManagement.RequiredResource { Name = "Power", Amount = 300 },
+                }
+            },
+
+            new ResourceManagement.Resource() {
+                Name = "Chopped Carbon Fibre",
+                Label= "Create Carbon Fibre",
+                Amount = 0,
+                Obtained = false,
+                CraftAmount = 15,
+                ListofRequiredResources = new List<ResourceManagement.RequiredResource>
+{
+                      new ResourceManagement.RequiredResource { Name = "Power", Amount = 500 },
+                     new ResourceManagement.RequiredResource { Name = "Carbon Fibre", Amount = 20},
+                    new ResourceManagement.RequiredResource { Name = "Nylon", Amount = 200 }
+                }
+            },
+
+            new ResourceManagement.Resource() {
+                Name = "3D Printed Parts",
+                Label= "Create Carbon Fibre",
+                Amount = 0,
+                Obtained = false,
+                CraftAmount = 3,
+                ListofRequiredResources = new List<ResourceManagement.RequiredResource>
+{
+                    new ResourceManagement.RequiredResource { Name = "Power", Amount = 1500 },
+                    new ResourceManagement.RequiredResource { Name = "Chopped Carbon Fibre", Amount = 100 }
+                }
+            },
+
+            new ResourceManagement.Resource() {
+                Name = "Diamond",
+                Label = "Compress Carbon into Diamond",
+                Amount = 0,
+                Obtained = false,
+                CraftAmount = 1,
+                ListofRequiredResources = new List<ResourceManagement.RequiredResource>
+{
+                    new ResourceManagement.RequiredResource { Name = "Power", Amount = 5000 },
+                    new ResourceManagement.RequiredResource { Name = "Carbon", Amount = 1000 }
+
+                }
+            }
+            },
+
+        ListofUpgrades = new List<ResourceManagement.Upgrade>()
+        {
+            //added in OnInitializedAsync}
+        }
+    };
+
+    private ResourceManagement.Resource getResource(string name)
+    {
+        return resourceManagement.ListofResources.Where(r => r.Name == name).FirstOrDefault();
+    }
+
+    private int autoClicker = 0;
+    private int autoClickerIncreaseCost = 250;//power, x 2 each time
+    private int autoclickerUpgrade = 0;
+    private int autoClickerUpgradeCost = 250;//nylon, x 2 each time
+
+    private int pairProductionIncreaseCost = 500;//power, x 2 each time
+    private int antimatterHarvestingIncreaseCost = 50;//matter, x 2 each time
+
+    private int pairProductionCost = 30;//power, static
+
+    //to cache
+    private int antimatterHarvesting = 0;
+
+    private double antimatterHarvestingChance = 0;
+    private TimeSpan autoClickerSpeed = new TimeSpan(0, 0, 0, 10, 00);
+
+    private List<string> ListofMessages = new List<string>();
+
+    //labels
+    private string autoClickerTitle = "Jump Start Pully System";
+    private string autoClickerLabel = "The pully system will operate the lever when you are idle.";
+
+    //**Buttons**
+    //Cheat Buttons - Enabled if Dev
+    private void DumpPower()
+    {
+        PowerChange(-getResource("Power").Amount);
+    }
+
+    private void LightningBolt()
+    {
+        PowerChange(9999999);
+    }
+
+    private void DoubleOrNothing()
+    {
+        if (rnd.NextDouble() > 0.5)
+        {
+            PowerChange(-getResource("Power").Amount);
+        }
+        else
+        {
+            PowerChange(getResource("Power").Amount);
+        }
+    }
+
+    public void PlayPauseStopWatch()
+    {
+        if (IsStopWatchTiming) { IsStopWatchTiming = false; } else { IsStopWatchTiming = true; }
+    }
+    //Lab
+    public void PairProduction()
+    {
+        if (getResource("Power").Amount >= pairProductionCost)
+        {
+            getResource("Power").Amount -= pairProductionCost;
+            var Message = "Renewable resources? This could be the first step towards somthing great.";
+            if (!ListofMessages.Contains(Message))
+            {
+                ListofMessages.Add(Message);
+            }
+
+            ConvertResources(getResource("Matter"));
+
+            if (rnd.NextDouble() <= antimatterHarvestingChance)
+            {
+                ConvertResources(getResource("Antimatter"));
+                Message = "Antimatter! That could of gone horrbily wrong.";
+                if (!ListofMessages.Contains(Message))
+                {
+                    ListofMessages.Add(Message);
+                }
+            }
+        }
+    }
+
+    //**Upgrades**
+    //Gen
+    public void AutoClickerIncrease()
+    {
+        if (getResource("Power").Amount >= autoClickerIncreaseCost)
+        {
+            if (autoClicker == 0)
+            {
+                autoClickerTitle = "Overclock Pully System";
+                autoClickerLabel = "Pully system will operate the lever more frequently when you are idle.";
+            }
+
+            PowerChange(-autoClickerIncreaseCost);
+            autoClicker++;
+            autoClickerSpeed = TimeSpan.FromTicks(Convert.ToUInt32(unchecked((int)autoClickerSpeed.Ticks) * 0.75));
+            autoClickerIncreaseCost = autoClickerIncreaseCost + autoClickerIncreaseCost;
+        }
+    }
+
+    //Lab
+    public void PairProductionIncrease()
+    {
+        if (getResource("Power").Amount >= pairProductionIncreaseCost)
+        {
+            PowerChange(-pairProductionIncreaseCost);
+            getResource("Matter").CraftAmount += 5;
+            getResource("Antimatter").CraftAmount += 5;
+            pairProductionIncreaseCost = getResource("Matter").CraftAmount * 50;
+        }
+    }
+
+    public void AntimatterHarvestingIncrease()
+    {
+        if (getResource("Matter").Amount >= antimatterHarvestingIncreaseCost)
+        {
+            getResource("Matter").Amount -= antimatterHarvestingIncreaseCost;
+            antimatterHarvesting++;
+            antimatterHarvestingChance = (antimatterHarvesting * 0.1);
+            antimatterHarvestingIncreaseCost = antimatterHarvestingIncreaseCost + antimatterHarvestingIncreaseCost;
+        }
+    }
+
+    //**Functions
+    public void ConvertResources(ResourceManagement.Resource resource)
+    {
+        hasRequiredResources = true;
+        foreach (ResourceManagement.RequiredResource requiredResource in resource.ListofRequiredResources)
+        {
+            if (requiredResource.Amount > getResource(requiredResource.Name).Amount)
+            {
+                hasRequiredResources = false;
+            }
+        }
+
+
+        if (hasRequiredResources)
+        {
+            foreach (ResourceManagement.RequiredResource requiredResource in resource.ListofRequiredResources)
+            {
+                getResource(requiredResource.Name).Amount -= requiredResource.Amount;
+            }
+
+            resource.Amount += resource.CraftAmount;
+            resource.Obtained = true;
+            StateHasChanged();
+        }
+
+    }
+
+    public void Upgrade(ResourceManagement.Upgrade upgrade)
+    {
+        hasRequiredResources = true;
+        foreach (ResourceManagement.RequiredResource requiredResource in upgrade.ListofRequiredResources)
+        {
+            if (requiredResource.Amount > getResource(requiredResource.Name).Amount)
+            {
+                hasRequiredResources = false;
+            }
+        }
+
+        if (hasRequiredResources)
+        {
+            foreach (ResourceManagement.RequiredResource requiredResource in upgrade.ListofRequiredResources)
+            {
+                getResource(requiredResource.Name).Amount -= requiredResource.Amount;
+            }
+
+            if(upgrade.ModifierMultiply == 0)
+            {
+                upgrade.Hidden = true;
+                upgrade.ListofRequiredResources[0].Amount = int.MaxValue;
+            }
+            else
+            {
+                foreach (ResourceManagement.RequiredResource requiredResource in upgrade.ListofRequiredResources)
+                {
+                    requiredResource.Amount = (upgrade.ListofRequiredResources[0].Amount * upgrade.CostMultiply) + upgrade.CostAdd;
+                }
+            }
+            upgrade.ModifierAdd += upgrade.ModifierAddIncrease;
+            upgrade.ModifierMultiply += upgrade.ModifierMultiplyIncrease;
+
+            upgrade.Obtained = true;
+            StateHasChanged();
+        }
+
+    }
+
+    [JSInvokable("InvokeSVGLeverLocation")]
+    public void SVGLeverLocation(string text)
+    {
+        lastAction = stopWatchTime;
+        //list foreach to get all mutipliers
+        int power = 3;
+        foreach (ResourceManagement.Upgrade upgrade in resourceManagement.ListofUpgrades.Where(r => r.ListofModifiedResources[0].Name == "Power"))
+        {
+            power = power * (upgrade.ModifierMultiply) + (upgrade.ModifierAdd);
+        }
+
+        PowerChange(power);
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        StopWatch();
+        ListofMessages.Add("Everything is dark. There is a small lever nearby. It looks stiff, but still operational.");
+        StateHasChanged();
+        lastAction = stopWatchTime;
+
+        //Lever upgrades
+        resourceManagement.ListofUpgrades.Add(
+            new ResourceManagement.Upgrade()
+            {
+                Name = "Lever Overclock",
+                Label = "Increases power generated by the lever",
+                Hidden = false,
+                Obtained = false,
+                ModifierAdd = 0,
+                ModifierMultiply = 1,
+                ModifierAddIncrease = 1,
+                ModifierMultiplyIncrease = 0,
+                CostAdd = 10,
+                CostMultiply = 1,
+                ListofModifiedResources = new List<ResourceManagement.Resource>{
+                resourceManagement.ListofResources.Where(r => r.Name == "Power").FirstOrDefault()
+                               },
+                ListofRequiredResources = new List<ResourceManagement.RequiredResource> {
+                    new ResourceManagement.RequiredResource { Name = "Power", Amount = 20 }
+                               }
+            }
+            );
+
+        resourceManagement.ListofUpgrades.Add(
+            new ResourceManagement.Upgrade()
+            {
+                Name = "Reinforce Lever",
+                Label = "Doubles power generated by the lever!",
+                Hidden = false,
+                Obtained = false,
+                ModifierAdd = 0,
+                ModifierMultiply = 1,
+                ModifierAddIncrease = 0,
+                ModifierMultiplyIncrease = 1,
+                CostAdd = 0,
+                CostMultiply = 2,
+                ListofModifiedResources = new List<ResourceManagement.Resource>
+    {
+    resourceManagement.ListofResources.Where(r => r.Name == "Power").FirstOrDefault()
+    },
+                ListofRequiredResources = new List<ResourceManagement.RequiredResource>
+        {
+        new ResourceManagement.RequiredResource { Name = "Carbon Fibre", Amount = 50 }
+        }
+            }
+            );
+
+        resourceManagement.ListofUpgrades.Add(
+            new ResourceManagement.Upgrade()
+            {
+                Name = "Diamond Tip",
+                Label = "Greatly increases power generated by the lever!",
+                Hidden = false,
+                Obtained = false,
+                ModifierAdd = 0,
+                ModifierMultiply = 1,
+                ModifierAddIncrease = 100,
+                ModifierMultiplyIncrease = 1,
+                CostAdd = 0,
+                CostMultiply = 2,
+                ListofModifiedResources = new List<ResourceManagement.Resource>
+    {
+    resourceManagement.ListofResources.Where(r => r.Name == "Power").FirstOrDefault()
+    },
+                ListofRequiredResources = new List<ResourceManagement.RequiredResource>
+        {
+        new ResourceManagement.RequiredResource { Name = "Diamond", Amount = 1 }
+        }
+            }
+            );
+
+        //Pully Upgrades
+        resourceManagement.ListofUpgrades.Add(
+           new ResourceManagement.Upgrade()
+           {
+               Name = "Nylon Pully",
+               Label = "Increases the speed",
+               Hidden = false,
+               Obtained = false,
+               ModifierAdd = 0,
+               ModifierMultiply = 1,
+               ModifierAddIncrease = 1,
+               ModifierMultiplyIncrease = 0,//0 cost = hidden todo
+               CostAdd = 0,
+               CostMultiply = 0,
+               ListofModifiedResources = new List<ResourceManagement.Resource>{
+                resourceManagement.ListofResources.Where(r => r.Name == "Pully").FirstOrDefault()
+                              },
+               ListofRequiredResources = new List<ResourceManagement.RequiredResource> {
+                    new ResourceManagement.RequiredResource { Name = "Nylon", Amount = 500 }
+                              }
+           }
+           );
+
+        resourceManagement.ListofUpgrades.Add(
+          new ResourceManagement.Upgrade()
+          {
+              Name = "Carbon Fibre Pully",
+              Label = "Increases the speed",
+              Hidden = false,
+              Obtained = false,
+              ModifierAdd = 0,
+              ModifierMultiply = 1,
+              ModifierAddIncrease = 1,
+              ModifierMultiplyIncrease = 0,//0 cost = hidden todo
+              CostAdd = 0,
+              CostMultiply = 0,
+              ListofModifiedResources = new List<ResourceManagement.Resource>{
+                resourceManagement.ListofResources.Where(r => r.Name == "Pully").FirstOrDefault()
+                             },
+              ListofRequiredResources = new List<ResourceManagement.RequiredResource> {
+                    new ResourceManagement.RequiredResource { Name = "Carbon Fibre", Amount = 500 }
+                             }
+          }
+          );
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var dotNetReference = DotNetObjectReference.Create(this);
+            JS.InvokeVoidAsync("DragAlongSVGInitalise", dotNetReference);
+        }
+    }
+
+    async Task StopWatch()
+    {
+        IsStopWatchTiming = true;
+        while (IsStopWatchTiming)
+        {
+            await Task.Delay(1000);
+            if (IsStopWatchTiming)
+            {
+                stopWatchTime = stopWatchTime.Add(new TimeSpan(0, 0, 1));
+
+                if (stopWatchTime.TotalSeconds % 3 == 0)
+                {
+                    PowerChange(-1);
+                    StateHasChanged();
+                }
+
+                if (autoClicker > 0)
+                {
+                    //inactive
+                    if (lastAction.Add(autoClickerSpeed) <= stopWatchTime)
+                    {
+                        //PowerChange(2*(3 + leverPowerModifier));
+                        lastAction = stopWatchTime;
+                        var dotNetReference = DotNetObjectReference.Create(this);
+                        JS.InvokeVoidAsync("autoClicker", dotNetReference);
+                    }
+                }
+            }
+        }
+    }
+
+    public void PowerChange(int ammount)
+    {
+        if (0 >= getResource("Power").Amount + ammount)//if newtotal power is less than 0
+        {
+            backgroundColor = "Black";
+            getResource("Power").Amount = 0;
+        }
+        else
+        {
+            var Message = "You hear a rumbling in the distance which quickly replaced by, the light hum of a motor.";
+            if (!ListofMessages.Contains(Message))
+            {
+                ListofMessages.Add(Message);
+            }
+            backgroundColor = "White";
+            getResource("Power").Amount += ammount;
+        }
+    }
+}
