@@ -394,7 +394,7 @@
     public async void ConsentCookies()
     {
         cookieRequiredContentVisibility = "visible";
-        await WriteCookieAsync("hasCookies", "True");
+        await WriteCookieAsync("hasCookies", "True");//todo, seems toi be session??
     }
     //override Functions
     protected override async Task OnInitializedAsync()
