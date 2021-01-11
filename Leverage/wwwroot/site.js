@@ -10,9 +10,10 @@ var base;
 var newSection;
 var currentSection = 'left';
 var lastSection = 'lastSectionDefault';
+var expirationDate = new Date.setFullYear(expiration_date.getFullYear() + 1).toUTCString();
 
 function writeCookie(name, value) {
-    document.cookie = name + "=" + value + "; path=/";
+    document.cookie = name + "=" + value + "; path=/; expires=" + expirationDate;
 }
 
 function readCookie(name) {
@@ -33,7 +34,7 @@ function deleteCookies() {
         var cookie = cookies[i];
         var eqPos = cookie.indexOf("=");
         var name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
-        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie = name + "=;expires=Wed, 15 Jan 2000 00:00:00 GMT";
     }
 }
 

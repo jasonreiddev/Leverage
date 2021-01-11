@@ -5,7 +5,7 @@
 /*    transition: all;*/
 }
 
-    .flex-container > * {
+    .flex-container > aside, .flex-container > section {
         margin: 0.5rem;
     }
 

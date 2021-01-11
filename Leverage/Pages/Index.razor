@@ -3,10 +3,17 @@
 @*@inject Services.BlazorTimer Timer*@
 @page "/"
 
-<main class="flex-container" style="background-color: @backgroundColor">
+@if (cookieRequiredContentVisibility == "hidden")
+{
+    <div id="cookieConsent" class="alert alert-info alert-dismissible fade show" role="alert">
+        Leverage requires cookies for save functionaility.
+        <button type="button" class="accept-policy close" data-dismiss="alert" aria-label="Close" data-cookie-string=".AspNet.Consent=yes; expires=Tue, 11 Jan 2022 15:54:46 GMT; path=/; secure; samesite=none">
+            <span aria-hidden="true" @onclick="ConsentCookies">Consent</span>
+        </button>
+    </div>
+}
 
-    @* Resources and Navigation *@
-
+<main class="flex-container" style="background-color: @backgroundColor; visibility:@cookieRequiredContentVisibility;">
 
     @* Text Box *@
     <aside>
@@ -20,160 +27,159 @@
         }
     </aside>
 
+    @* Room *@
+<section>
+    @* Room Navigation *@
+    <nav id="Nav" class="">
+        <button class="btn" @onclick="NavGenerator">Generator</button>
+        <button class="btn" @onclick="NavLab">Lab</button>
+    </nav>
+    <br />
 
-    @* Lever *@
-    <section>
-        <nav id="Nav" class="">
-            <button class="btn" @onclick="NavGenerator">Generator</button>
-            <button class="btn" @onclick="NavLab">Lab</button>
-        </nav>
-        <br />
-        <div id="Generator" class="@generator room">
+    @* Generator Room *@
+    <div id="Generator" class="@generator room">
+        <svg id="leverSVG" width="300" height="150" style="background: lightgrey;" class="container" onload="">
+            <path id="path" d=" M 50 115 A 100 90 0 0 1 250 115" fill="transparent" stroke="black" stroke-dasharray="5,5" />
+            <circle id="base" cx="150" cy="125" r="40" stroke="black" stroke-width="4" fill="grey" />
+            <rect x="75" y="120" rx="20" ry="20" width="150" height="50" style="fill:grey;stroke:black;stroke-width:5;" />
+        </svg>
+        <br /><br />
 
+        @* Dev *@
+        @if (true)
+        {
+            <button class="btn btn-primary" @onclick="PlayPauseStopWatch">
+                @if (IsStopWatchTiming)
+                {<span>Pause</span> }
+                else
+                { <span>Play</span>}
+            </button>
 
+            <button id="dumpPower" class="btn btn-danger" @onclick="DumpPower">Dump!</button>
 
+            <button id="doubleOrNothing" class="btn btn-danger" @onclick="DoubleOrNothing">Double or Nothing!</button>
 
+            <button id="lightningBolt" class="btn btn-danger" @onclick="LightningBolt">LightningBolt!</button>
 
-            <svg id="leverSVG" width="300" height="150" style="background: lightgrey;" class="container" onload="">
-                <path id="path" d=" M 50 115 A 100 90 0 0 1 250 115" fill="transparent" stroke="black" stroke-dasharray="5,5" />
-                <circle id="base" cx="150" cy="125" r="40" stroke="black" stroke-width="4" fill="grey" />
-                <rect x="75" y="120" rx="20" ry="20" width="150" height="50" style="fill:grey;stroke:black;stroke-width:5;" />
-            </svg>
-            <br /><br />
+            <button id="restart" class="btn btn-danger" @onclick="Restart">Restart.</button>
 
-            @* Dev *@
-            @if (true)
+            <button id="save" class="btn btn-danger" @onclick="Save">save</button>
+            <hr />
+        }
+
+        @foreach (ResourceManagement.Upgrade upgrade in resourceManagement.ListofUpgrades.Where(r => r.Modifies == "PowerCreation"))
+        {
+            bool locked = false;
+            foreach (ResourceManagement.RequiredResource requiredResource in upgrade.ListofRequiredResources)
             {
-                <button class="btn btn-primary" @onclick="PlayPauseStopWatch">
-                    @if (IsStopWatchTiming)
-                    {<span>Pause</span> }
-                    else
-                    { <span>Play</span>}
+                if (!getResource(requiredResource.Name).Obtained)
+                {
+                    locked = true;
+                }
+            }
+            if (!locked)
+            {
+                <h4>@upgrade.Name</h4>
+                <label for="@upgrade.Label">@upgrade.Label</label>
+                <button id="@upgrade.Label" class="btn btn-primary" @onclick='() => BuyUpgrade(upgrade)'>
+                    @foreach (ResourceManagement.RequiredResource RequiredResource in upgrade.ListofRequiredResources)
+                    {
+                        <span>@RequiredResource.Name: @RequiredResource.Amount </span>
+                    }
                 </button>
-
-                <button id="dumpPower" class="btn btn-danger" @onclick="DumpPower">Dump!</button>
-
-                <button id="doubleOrNothing" class="btn btn-danger" @onclick="DoubleOrNothing">Double or Nothing!</button>
-
-                <button id="lightningBolt" class="btn btn-danger" @onclick="LightningBolt">LightningBolt!</button>
-
-                <button id="restart" class="btn btn-danger" @onclick="Restart">Restart.</button>
-
-                <button id="save" class="btn btn-danger" @onclick="Save">save</button>
                 <hr />
             }
+        }
 
-            @foreach (ResourceManagement.Upgrade upgrade in resourceManagement.ListofUpgrades.Where(r => r.Modifies == "PowerCreation"))
-            {
-                bool locked = false;
-                foreach (ResourceManagement.RequiredResource requiredResource in upgrade.ListofRequiredResources)
-                {
-                    if (!getResource(requiredResource.Name).Obtained)
-                    {
-                        locked = true;
-                    }
-                }
-                if (!locked)
-                {
-                    <h4>@upgrade.Name</h4>
-                    <label for="@upgrade.Label">@upgrade.Label</label>
-                    <button id="@upgrade.Label" class="btn btn-primary" @onclick='() => Upgrade(upgrade)'>
-                        @foreach (ResourceManagement.RequiredResource RequiredResource in upgrade.ListofRequiredResources)
-                        {
-                            <span>@RequiredResource.Name: @RequiredResource.Amount </span>
-                        }
-                    </button>
-                    <hr />
-                }
-            }
-
-            <h4>@autoClickerTitle</h4>
+        @*<h4>@autoClickerTitle</h4>
             <label for="autoClickerIncrease">@autoClickerLabel</label>
             <button id="autoClickerIncrease" class="btn btn-primary" @onclick="AutoClickerIncrease">@autoClickerIncreaseCost Power</button>
+            <hr />*@
+
+        @foreach (ResourceManagement.Upgrade upgrade in resourceManagement.ListofUpgrades.Where(r => r.Modifies == "PullySpeed"))
+        {
+            bool locked = false;
+            foreach (ResourceManagement.RequiredResource requiredResource in upgrade.ListofRequiredResources)
+            {
+                if (!getResource(requiredResource.Name).Obtained)
+                {
+                    locked = true;
+                }
+            }
+            if (!locked)
+            {
+                <h4>@upgrade.Name</h4>
+                <label for="@upgrade.Label">@upgrade.Label</label>
+                <button id="@upgrade.Label" class="btn btn-primary" @onclick='() => BuyUpgrade(upgrade)'>
+                    @foreach (ResourceManagement.RequiredResource RequiredResource in upgrade.ListofRequiredResources)
+                    {
+                        <span>@RequiredResource.Name:&nbsp;@RequiredResource.Amount&nbsp;</span>
+                    }
+                </button>
+                <hr />
+            }
+        }
+    </div>
+
+    @* Lab Room *@
+    <div id="Lab" class="@lab room">
+        @if (getResource("Matter").CraftAmount > 0)
+        {
+            <h4>Pair Production</h4>
+            <label for="pairProduction">Converts a photon into a pair of particles: one matter, one antimatter.</label>
+            <button id="pairProduction" class="btn btn-primary" @onclick="PairProduction">@pairProductionCost Power</button>
             <hr />
 
-            @foreach (ResourceManagement.Upgrade upgrade in resourceManagement.ListofUpgrades.Where(r => r.Modifies == "PullySpeed"))
+            <label for="pairProductionIncrease">Increase photons fired per production cycle.</label>
+            <button id="pairProductionIncrease" class="btn btn-primary" @onclick="PairProductionIncrease">@pairProductionIncreaseCost Power</button>
+            <hr />
+
+            if (antimatterHarvestingChance < 1)
             {
-                bool locked = false;
-                foreach (ResourceManagement.RequiredResource requiredResource in upgrade.ListofRequiredResources)
+                <label for="antimatterHarvestingIncrease">Increase the probability of harvesting antimatter from pair production.</label>
+                <button id="antimatterHarvestingIncrease" class="btn btn-primary" @onclick="AntimatterHarvestingIncrease">@antimatterHarvestingIncreaseCost Matter</button>
+                <hr />
+
+            }
+        }
+        else
+        {
+            <h4>Reebot Particle Accelerator Terminal</h4>
+            <label for="pairProductionIncrease">Unlocks Pair Production.</label>
+            <button id="pairProductionIncrease" class="btn btn-primary" @onclick="PairProductionIncrease">@pairProductionIncreaseCost Power</button>
+            <hr />
+        }
+
+        @foreach (ResourceManagement.Resource resource in resourceManagement.ListofResources.Where(r => r.CraftAmount > 0 && !r.Hidden))
+        {
+            bool locked = false;
+            foreach (ResourceManagement.RequiredResource requiredResource in resource.ListofRequiredResources)
+            {
+                if (!getResource(requiredResource.Name).Obtained)
                 {
-                    if (!getResource(requiredResource.Name).Obtained)
+                    locked = true;
+                }
+            }
+            if (!locked)
+            {
+                <h4>@resource.Name</h4>
+                <label for="@resource.Label">@resource.Label</label>
+                <button id="@resource.Label" class="btn btn-primary" @onclick='() => ConvertResources(resource)'>
+                    @foreach (ResourceManagement.RequiredResource RequiredResource in resource.ListofRequiredResources)
                     {
-                        locked = true;
+                        <span>@RequiredResource.Name:&nbsp;@RequiredResource.Amount&nbsp;</span>
                     }
-                }
-                if (!locked)
-                {
-                    <h4>@upgrade.Name</h4>
-                    <label for="@upgrade.Label">@upgrade.Label</label>
-                    <button id="@upgrade.Label" class="btn btn-primary" @onclick='() => Upgrade(upgrade)'>
-                        @foreach (ResourceManagement.RequiredResource RequiredResource in upgrade.ListofRequiredResources)
-                        {
-                            <span>@RequiredResource.Name: @RequiredResource.Amount </span>
-                        }
-                    </button>
-                    <hr />
-                }
-            }
-        </div>
-
-        <div id="Lab" class="@lab room">
-            @if (getResource("Matter").CraftAmount > 0)
-            {
-                <h4>Pair Production</h4>
-                <label for="pairProduction">Converts a photon into a pair of particles: one matter, one antimatter.</label>
-                <button id="pairProduction" class="btn btn-primary" @onclick="PairProduction">@pairProductionCost Power</button>
-                <hr />
-
-                <label for="pairProductionIncrease">Increase photons fired per production cycle.</label>
-                <button id="pairProductionIncrease" class="btn btn-primary" @onclick="PairProductionIncrease">@pairProductionIncreaseCost Power</button>
-                <hr />
-
-                if (antimatterHarvestingChance < 1)
-                {
-                    <label for="antimatterHarvestingIncrease">Increase the probability of harvesting antimatter from pair production.</label>
-                    <button id="antimatterHarvestingIncrease" class="btn btn-primary" @onclick="AntimatterHarvestingIncrease">@antimatterHarvestingIncreaseCost Matter</button>
-                    <hr />
-
-                }
-            }
-            else
-            {
-                <h4>Reebot Particle Accelerator Terminal</h4>
-                <label for="pairProductionIncrease">Unlocks Pair Production.</label>
-                <button id="pairProductionIncrease" class="btn btn-primary" @onclick="PairProductionIncrease">@pairProductionIncreaseCost Power</button>
+                </button>
                 <hr />
             }
+        }
+    </div>
+</section>
 
-            @foreach (ResourceManagement.Resource resource in resourceManagement.ListofResources.Where(r => r.CraftAmount > 0 && !r.Hidden))
-            {
-                bool locked = false;
-                foreach (ResourceManagement.RequiredResource requiredResource in resource.ListofRequiredResources)
-                {
-                    if (!getResource(requiredResource.Name).Obtained)
-                    {
-                        locked = true;
-                    }
-                }
-                if (!locked)
-                {
-                    <h4>@resource.Name</h4>
-                    <label for="@resource.Label">@resource.Label</label>
-                    <button id="@resource.Label" class="btn btn-primary" @onclick='() => ConvertResources(resource)'>
-                        @foreach (ResourceManagement.RequiredResource RequiredResource in resource.ListofRequiredResources)
-                        {
-                            <span>@RequiredResource.Name: @RequiredResource.Amount </span>
-                        }
-                    </button>
-                    <hr />
-                }
-            }
-        </div>
-    </section>
     <aside>
         @foreach (ResourceManagement.Resource resource in resourceManagement.ListofResources.Where(r => r.Obtained))
         {
-            <span>@resource.Name: @resource.Amount</span><br />
+            <span>@resource.Name:&nbsp;@resource.Amount&nbsp;</span><br />
         }
     </aside>
 
@@ -186,8 +192,7 @@
 
 @code{
 
-
-    //classes
+    #region Classes
     public class ResourceManagement
     {
         public List<Resource> ListofResources { get; set; }
@@ -212,7 +217,7 @@
             public bool Obtained { get; set; }
             public int Level { get; set; }
             public int ModifierAdd { get; set; }
-            public int ModifierMultiply { get; set; }
+            public double ModifierMultiply { get; set; }
             public int CostAdd { get; set; }
             public int CostMultiply { get; set; }
             public List<RequiredResource> ListofRequiredResources { get; set; }
@@ -228,24 +233,17 @@
     public class Upgradeable
     {
         public string Name { get; set; }
-        public int Value { get; set; }
+        public double Value { get; set; }
     }
+    #endregion
 
-    //Room 'Navigation'
+    #region Global Variables
+    private string cookieRequiredContentVisibility = "hidden";
+    //Navigation
     private string generator = "";
     private string lab = "hidden";
-    public void NavLab()
-    {
-        generator = "hidden";
-        lab = "";
-    }
-    public void NavGenerator()
-    {
-        generator = "";
-        lab = "hidden";
-    }
 
-    //variables
+    //Stopwatch
     private TimeSpan stopWatchTime = new TimeSpan(0, 0, 0);
     private TimeSpan lastAction = new TimeSpan(0, 0, 0);
     bool IsStopWatchTiming = false;
@@ -392,24 +390,13 @@
         new Upgradeable(){Name="PowerCreation",Value=3},
         new Upgradeable(){Name="PullySpeed",Value=10},
     };
-
-    public async Task WriteCookieAsync(string name, string value)
+    #endregion
+    public async void ConsentCookies()
     {
-        await JS.InvokeAsync<object>("writeCookie", name, value);
+        cookieRequiredContentVisibility = "visible";
+        await WriteCookieAsync("hasCookies", "True");
     }
-
-    string cookieValue;
-    public async Task<string> ReadCookieAsync(string name)
-    {
-        return cookieValue = await JS.InvokeAsync<string>("readCookie", name);
-    }
-
-    public async Task deleteCookies()
-    {
-        await JS.InvokeAsync<object>("deleteCookies");
-    }
-
-    //Upgrades
+    //override Functions
     protected override async Task OnInitializedAsync()
     {
 
@@ -418,25 +405,26 @@
         StateHasChanged();
         lastAction = stopWatchTime;
 
+        #region Upgrades
         //Lever upgrades
         resourceManagement.ListofUpgrades.Add(
-        new ResourceManagement.Upgrade()
-        {
-            Name = "Lever Overclock",
-            Label = "Increases power generated by the lever",
-            Modifies = "PowerCreation",
-            Hidden = false,
-            Obtained = false,
-            Level = 0,
-            ModifierAdd = 1,
-            ModifierMultiply = 1,
-            CostAdd = 10,
-            CostMultiply = 1,
-            ListofRequiredResources = new List<ResourceManagement.RequiredResource> {
+    new ResourceManagement.Upgrade()
+    {
+        Name = "Lever Overclock",
+        Label = "Increases power generated by the lever",
+        Modifies = "PowerCreation",
+        Hidden = false,
+        Obtained = false,
+        Level = 0,
+        ModifierAdd = 1,
+        ModifierMultiply = 1,
+        CostAdd = 10,
+        CostMultiply = 1,
+        ListofRequiredResources = new List<ResourceManagement.RequiredResource> {
                                             new ResourceManagement.RequiredResource { Name = "Power", Amount = 20 }
-                }
-        }
-            );
+                                    }
+    }
+        );
 
         resourceManagement.ListofUpgrades.Add(
             new ResourceManagement.Upgrade()
@@ -448,13 +436,13 @@
                 Obtained = false,
                 Level = 0,
                 ModifierAdd = 0,
-                ModifierMultiply = 2,
+                ModifierMultiply = 0,
                 CostAdd = 0,
                 CostMultiply = 2,
                 ListofRequiredResources = new List<ResourceManagement.RequiredResource>
         {
-        new ResourceManagement.RequiredResource { Name = "Carbon Fibre", Amount = 50 }
-                }
+        new ResourceManagement.RequiredResource { Name = "Carbon Fibre", Amount = 10 }
+                                        }
             }
             );
 
@@ -468,35 +456,54 @@
                 Obtained = false,
                 Level = 0,
                 ModifierAdd = 0,
-                ModifierMultiply = 2,
+                ModifierMultiply = 0,
                 CostAdd = 0,
                 CostMultiply = 2,
                 ListofRequiredResources = new List<ResourceManagement.RequiredResource>
         {
         new ResourceManagement.RequiredResource { Name = "Diamond", Amount = 1 }
-                }
+                                        }
             }
             );
 
         //Pully Upgrades
         resourceManagement.ListofUpgrades.Add(
-           new ResourceManagement.Upgrade()
-           {
-               Name = "Nylon Pully",
-               Label = "Increases the speed",
-               Modifies = "PullySpeed",
-               Hidden = false,
-               Obtained = false,
-               Level = 0,
-               ModifierAdd = 0,
-               ModifierMultiply = 2,
-               CostAdd = 0,
-               CostMultiply = 0,
-               ListofRequiredResources = new List<ResourceManagement.RequiredResource> {
+       new ResourceManagement.Upgrade()
+       {
+           Name = "Pully Overclock",
+           Label = "Increases the speed",
+           Modifies = "PullySpeed",
+           Hidden = false,
+           Obtained = false,
+           Level = 0,
+           ModifierAdd = 0,
+           ModifierMultiply = 0.75,
+           CostAdd = 0,
+           CostMultiply = 2,
+           ListofRequiredResources = new List<ResourceManagement.RequiredResource> {
+                                            new ResourceManagement.RequiredResource { Name = "Power", Amount = 250 }
+                                       }
+       }
+           );
+
+        resourceManagement.ListofUpgrades.Add(
+       new ResourceManagement.Upgrade()
+       {
+           Name = "Nylon Pully",
+           Label = "Increases the speed",
+           Modifies = "PullySpeed",
+           Hidden = false,
+           Obtained = false,
+           Level = 0,
+           ModifierAdd = 0,
+           ModifierMultiply = 2,
+           CostAdd = 0,
+           CostMultiply = 0,
+           ListofRequiredResources = new List<ResourceManagement.RequiredResource> {
                     new ResourceManagement.RequiredResource { Name = "Nylon", Amount = 500 }
-                                      }
-           }
-           ); ;
+                                                          }
+       }
+       );
 
         resourceManagement.ListofUpgrades.Add(
           new ResourceManagement.Upgrade()
@@ -513,46 +520,74 @@
               CostMultiply = 0,
               ListofRequiredResources = new List<ResourceManagement.RequiredResource> {
                     new ResourceManagement.RequiredResource { Name = "Carbon Fibre", Amount = 500 }
-                                     }
+                                                             }
           }
           );
+        #endregion
 
         if (bool.TryParse(await ReadCookieAsync("hasCookies"), out bool hasCookie))
         {
+            cookieRequiredContentVisibility = "visible";
             foreach (ResourceManagement.Upgrade upgrade in resourceManagement.ListofUpgrades)
             {
                 int.TryParse(await ReadCookieAsync(upgrade.Name), out var level);
                 upgrade.Level = level;
-                foreach (ResourceManagement.RequiredResource requiredResource in upgrade.ListofRequiredResources)
+                for (var i = 0; i < level; i++)
                 {
-                    for (var i = 0; i > level; i++)
-                    {
-                        Upgrade(upgrade);
-                    }
-                    //todo
-                    // Save Level of each upgrade as cookie [Name and Level key]
-                    // Use upgradeValue() on load with cookie value to set Upgradable (i.e. PowerCreation)
-                    // Create function to set upgrade price (and level) with cookie value
-                    // Reset Button with Confirmation
+                    Upgrade(upgrade);
+                }
+            }
+            foreach (ResourceManagement.Resource resource in resourceManagement.ListofResources)
+            {
+                int.TryParse(await ReadCookieAsync(resource.Name), out var ammount);
+                if (ammount > 0)
+                {
+                    resource.Amount = ammount;
+                    resource.Obtained = true;
                 }
 
             }
-        }
-        else
-        {
-            await WriteCookieAsync("hasCookies", "True");
+            PowerChange(0);//turn on light if power :)
         }
     }
+
+    #region Functions
+
+    #region Navigation
+    public void NavLab()
+    {
+        generator = "hidden";
+        lab = "";
+    }
+    public void NavGenerator()
+    {
+        generator = "";
+        lab = "hidden";
+    }
+    #endregion
+
+    #region Cookies
+    public async Task WriteCookieAsync(string name, string value)
+    {
+        await JS.InvokeAsync<object>("writeCookie", name, value);
+    }
+
+    string cookieValue;
+    public async Task<string> ReadCookieAsync(string name)
+    {
+        return cookieValue = await JS.InvokeAsync<string>("readCookie", name);
+    }
+
+    public async Task deleteCookies()
+    {
+        await JS.InvokeAsync<object>("deleteCookies");
+    }
+    #endregion
 
     private ResourceManagement.Resource getResource(string name)
     {
         return resourceManagement.ListofResources.Where(r => r.Name == name).FirstOrDefault();
     }
-
-    private int autoClicker = 0;
-    private int autoClickerIncreaseCost = 250;//power, x 2 each time
-    private int autoclickerUpgrade = 0;
-    private int autoClickerUpgradeCost = 250;//nylon, x 2 each time
 
     private int pairProductionIncreaseCost = 500;//power, x 2 each time
     private int antimatterHarvestingIncreaseCost = 50;//matter, x 2 each time
@@ -563,7 +598,7 @@
     private int antimatterHarvesting = 0;
 
     private double antimatterHarvestingChance = 0;
-    private TimeSpan autoClickerSpeed = new TimeSpan(0, 0, 0, 10, 00);
+    //private TimeSpan autoClickerSpeed = new TimeSpan(0, 0, 0, 10, 00);
 
     private List<string> ListofMessages = new List<string>();
 
@@ -575,15 +610,16 @@
     //Cheat Buttons - Enabled if Dev
     private async void Save()
     {
-        //todo check
+        await WriteCookieAsync("hasCookies", "True");
+
         foreach (ResourceManagement.Upgrade upgrade in resourceManagement.ListofUpgrades)
         {
             await WriteCookieAsync(upgrade.Name, upgrade.Level.ToString());
         }
 
-        foreach (Upgradeable upgradeable in ListofUpgradeables)
+        foreach (ResourceManagement.Resource resource in resourceManagement.ListofResources)
         {
-
+            await WriteCookieAsync(resource.Name, resource.Amount.ToString());
         }
     }
 
@@ -646,26 +682,6 @@
         }
     }
 
-    //**Upgrades**
-    //Gen
-    public void AutoClickerIncrease()
-    {
-        if (getResource("Power").Amount >= autoClickerIncreaseCost)
-        {
-            if (autoClicker == 0)
-            {
-                autoClickerTitle = "Overclock Pully System";
-                autoClickerLabel = "Pully system will operate the lever more frequently when you are idle.";
-            }
-
-            PowerChange(-autoClickerIncreaseCost);
-            autoClicker++;
-            autoClickerSpeed = TimeSpan.FromTicks(Convert.ToUInt32(unchecked((int)autoClickerSpeed.Ticks) * 0.75));
-            autoClickerIncreaseCost = autoClickerIncreaseCost + autoClickerIncreaseCost;
-        }
-    }
-
-    //Lab
     public void PairProductionIncrease()
     {
         if (getResource("Power").Amount >= pairProductionIncreaseCost)
@@ -700,7 +716,6 @@
             }
         }
 
-
         if (hasRequiredResources)
         {
             foreach (ResourceManagement.RequiredResource requiredResource in resource.ListofRequiredResources)
@@ -712,10 +727,9 @@
             resource.Obtained = true;
             StateHasChanged();
         }
-
     }
 
-    public void Upgrade(ResourceManagement.Upgrade upgrade)
+    public void BuyUpgrade(ResourceManagement.Upgrade upgrade)
     {
         hasRequiredResources = true;
         foreach (ResourceManagement.RequiredResource requiredResource in upgrade.ListofRequiredResources)
@@ -732,38 +746,37 @@
             {
                 getResource(requiredResource.Name).Amount -= requiredResource.Amount;
             }
-
-            if (upgrade.ModifierMultiply == 0)
-            {
-                upgrade.Hidden = true;
-                upgrade.ListofRequiredResources[0].Amount = int.MaxValue;
-            }
-            else
-            {
-                foreach (ResourceManagement.RequiredResource requiredResource in upgrade.ListofRequiredResources)
-                {
-                    requiredResource.Amount = (upgrade.ListofRequiredResources[0].Amount * upgrade.CostMultiply) + upgrade.CostAdd;
-                }
-            }
-
-            upgrade.Level++;
-            upgrade.Obtained = true;
-            upgradeValue(ListofUpgradeables.Where(u => u.Name == upgrade.Modifies).FirstOrDefault(), upgrade);
-            StateHasChanged();
+            Upgrade(upgrade);
         }
 
     }
     //can use in init from cookie
-    public void upgradeValue(Upgradeable upgradeable, ResourceManagement.Upgrade upgrade)
+    public void Upgrade(ResourceManagement.Upgrade upgrade)
     {
+        var upgradeable = ListofUpgradeables.Where(u => u.Name == upgrade.Modifies).FirstOrDefault();
         upgradeable.Value = (upgradeable.Value + upgrade.ModifierAdd) * upgrade.ModifierMultiply;
+        upgrade.Level++;
+        upgrade.Obtained = true;
+
+        if (upgrade.ModifierMultiply == 0)
+        {
+            upgrade.Hidden = true;
+            upgrade.ListofRequiredResources[0].Amount = int.MaxValue;
+        }
+        else
+        {
+            foreach (ResourceManagement.RequiredResource requiredResource in upgrade.ListofRequiredResources)
+            {
+                requiredResource.Amount = (upgrade.ListofRequiredResources[0].Amount * upgrade.CostMultiply) + upgrade.CostAdd;
+            }
+        }
+        StateHasChanged();
     }
 
     [JSInvokable("InvokeSVGLeverLocation")]
     public void SVGLeverLocation(string text)
     {
         lastAction = stopWatchTime;
-        var test = ListofUpgradeables.Where(u => u.Name == "PowerCreation").FirstOrDefault().Value;
         PowerChange(ListofUpgradeables.Where(u => u.Name == "PowerCreation").FirstOrDefault().Value);
         StateHasChanged();
     }
@@ -793,10 +806,20 @@
                     StateHasChanged();
                 }
 
-                if (autoClicker > 0)
+                if (stopWatchTime.TotalSeconds % 600 == 0)
+                {
+                    //autosave, every  10 mins
+                    Save();
+                }
+
+                if (resourceManagement.ListofUpgrades.Where(u => u.Name == "Pully Overclock").FirstOrDefault().Level > 0)
                 {
                     //inactive
-                    if (lastAction.Add(autoClickerSpeed) <= stopWatchTime)
+                    var time = ListofUpgradeables.Where(u => u.Name == "PullySpeed").FirstOrDefault().Value;
+                    int seconds = (int)time;
+                    int milliseconds = (int)time - seconds;
+
+                    if (lastAction.Add(new TimeSpan(0, 0, 0, seconds, milliseconds)) <= stopWatchTime)
                     {
                         //PowerChange(2*(3 + leverPowerModifier));
                         lastAction = stopWatchTime;
@@ -809,9 +832,10 @@
         }
     }
 
-    public void PowerChange(int ammount)
+    public void PowerChange(double ammount)
     {
-        if (0 >= getResource("Power").Amount + ammount)//if newtotal power is less than 0
+        int ammountInt = (int)Math.Floor(ammount);
+        if (0 >= getResource("Power").Amount + ammountInt)//if newtotal power is less than 0
         {
             backgroundColor = "Black";
             getResource("Power").Amount = 0;
@@ -824,7 +848,8 @@
                 ListofMessages.Add(Message);
             }
             backgroundColor = "White";
-            getResource("Power").Amount += ammount;
+            getResource("Power").Amount += ammountInt;
         }
     }
+    #endregion
 }
